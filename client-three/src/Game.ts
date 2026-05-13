@@ -1,0 +1,383 @@
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+export const BOARD_SIZE = 5;
+export const TOTAL_ROUNDS = 40;
+export const MIN_SEGMENT_LENGTH = 3;
+
+export const SEGMENT_SCORE: Record<number, number> = {
+    3: 10,
+    4: 20,
+    5: 30,
+};
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type TokenSymbol = 'SQUARE' | 'CROSS' | 'TRIANGLE' | 'CIRCLE';
+
+export const TokenSymbols: TokenSymbol[] = ['SQUARE', 'CROSS', 'TRIANGLE', 'CIRCLE'];
+
+export interface IPosition {
+    tx: number;
+    ty: number;
+}
+
+export type PieceSlot = 'center' | 'up' | 'down' | 'left' | 'right'
+
+/** One tile of a piece, with its offset from the center and its color */
+export interface IPieceToken {
+    piece: IPiece;
+    slot: PieceSlot;
+    dx: number;
+    dy: number;
+    token: IToken;
+}
+
+/** Represents a token with an immutable ID */
+export interface IToken {
+    readonly tokenId: number;
+    readonly symbol: TokenSymbol;
+    readonly originalPieceId: number;
+    readonly originalSlot: PieceSlot;
+}
+
+/**
+ * A cross-shaped piece:
+ * - center is always present
+ * - each arm is optional
+ */
+export interface IPiece {
+    readonly pieceId: number;
+    readonly center: IToken;
+    readonly up?: IToken;
+    readonly down?: IToken;
+    readonly left?: IToken;
+    readonly right?: IToken;
+}
+
+/** Returns the piece as a flat list of tiles (for placement logic) */
+export function pieceTokens(piece: IPiece): IPieceToken[] {
+    const tiles: IPieceToken[] = [{ dx: 0, dy: 0, piece, slot: 'center', token: piece.center }];
+    if (piece.up) tiles.push({ dx: 0, dy: -1, piece, slot: 'up', token: piece.up });
+    if (piece.down) tiles.push({ dx: 0, dy: 1, piece, slot: 'down', token: piece.down });
+    if (piece.left) tiles.push({ dx: -1, dy: 0, piece, slot: 'left', token: piece.left });
+    if (piece.right) tiles.push({ dx: 1, dy: 0, piece, slot: 'right', token: piece.right });
+    return tiles;
+}
+
+export interface LineSegment {
+    direction: 'horizontal' | 'vertical';
+    start: IPosition;
+    length: number;
+    color: TokenSymbol;
+    segmentScore: number;
+}
+
+// ─── RNG (seed-based, deterministic) ─────────────────────────────────────────
+
+export class Rng128 {
+    private a: number;
+    private b: number;
+    private c: number;
+    private d: number;
+
+    constructor(seed: string) {
+        [this.a, this.b, this.c, this.d] = Rng128.cyrb128(seed);
+    }
+
+    private static cyrb128(str: string): [number, number, number, number] {
+        let h1 = 1779033703, h2 = 3144134277,
+            h3 = 1013904242, h4 = 2773480762;
+        for (let i = 0; i < str.length; i++) {
+            const k = str.charCodeAt(i);
+            h1 = Math.imul(h1 ^ k, 597399067);
+            h2 = Math.imul(h2 ^ k, 2869860233);
+            h3 = Math.imul(h3 ^ k, 951274213);
+            h4 = Math.imul(h4 ^ k, 2716044179);
+        }
+        h1 ^= (h2 >>> 18) ^ (h3 << 12) ^ (h4 >>> 3);
+        h2 ^= (h3 >>> 22) ^ (h4 << 5) ^ (h1 >>> 9);
+        h3 ^= (h4 >>> 17) ^ (h1 << 13) ^ (h2 >>> 7);
+        h4 ^= (h1 >>> 19) ^ (h2 << 11) ^ (h3 >>> 5);
+        return [h1 >>> 0, h2 >>> 0, h3 >>> 0, h4 >>> 0];
+    }
+
+    nextFloat(): number {
+        this.a >>>= 0; this.b >>>= 0; this.c >>>= 0; this.d >>>= 0;
+        const t = (this.a + this.b) | 0;
+        this.a = this.b ^ (this.b >>> 9);
+        this.b = (this.c + (this.c << 3)) | 0;
+        this.c = (this.c << 21) | (this.c >>> 11);
+        this.d = (this.d + 1) | 0;
+        const r = (t + this.d) | 0;
+        this.c = (this.c + r) | 0;
+        return (r >>> 0) / 4294967296;
+    }
+
+    nextInt(maxExclusive: number): number {
+        return Math.floor(this.nextFloat() * maxExclusive);
+    }
+}
+
+function randomColor(rng: Rng128): TokenSymbol {
+    return TokenSymbols[rng.nextInt(TokenSymbols.length)]!;
+}
+
+export function generatePieces(count: number, seed: string): IPiece[] {
+    const rng = new Rng128(seed);
+    const pieces: IPiece[] = [];
+    let nextPieceId = 0;
+    let nextTokenId = 0;
+
+    function makeToken(originalPieceId: number, originalSlot: PieceSlot): IToken {
+        return {
+            tokenId: nextTokenId++,
+            symbol: randomColor(rng),
+            originalPieceId,
+            originalSlot,
+        };
+    }
+
+    for (let i = 0; i < count; i++) {
+        const pieceId = nextPieceId++;
+        const center = makeToken(pieceId, 'center');
+        let up = (rng.nextFloat() < 0.5) ? makeToken(pieceId, 'up') : undefined;
+        let down = (rng.nextFloat() < 0.5) ? makeToken(pieceId, 'down') : undefined;
+        let left = (rng.nextFloat() < 0.5) ? makeToken(pieceId, 'left') : undefined;
+        let right = (rng.nextFloat() < 0.5) ? makeToken(pieceId, 'right') : undefined;
+
+        const piece: IPiece = { pieceId, center, up, down, left, right };
+        pieces.push(piece);
+    }
+    return pieces;
+}
+
+// ─── Board ────────────────────────────────────────────────────────────────────
+
+export type Grid = ReadonlyArray<ReadonlyArray<IToken | null>>;
+
+export class Board {
+    private readonly grid: Grid;
+
+    constructor(grid?: Grid) {
+        if (grid) {
+            this.grid = grid.map(row => [...row]);
+        } else {
+            this.grid = Array.from({ length: BOARD_SIZE }, () =>
+                Array(BOARD_SIZE).fill(null)
+            );
+        }
+    }
+
+    getCell(tx: number, ty: number): IToken | null {
+        return this.grid[ty]?.[tx] ?? null;
+    }
+
+    getGrid(): Grid {
+        return this.grid;
+    }
+
+    /** Place a piece at position, return new board + overwrite count and overwritten tokens */
+    placePiece(piece: IPiece, pos: IPosition): { board: Board; overwrites: number; overwrittenTokens: IToken[] } {
+        const mutable = this.grid.map(row => [...row]);
+        let overwrites = 0;
+        const overwrittenTokens: IToken[] = [];
+
+        for (const tile of pieceTokens(piece)) {
+            const tx = pos.tx + tile.dx;
+            const ty = pos.ty + tile.dy;
+            if (tx < 0 || tx >= BOARD_SIZE || ty < 0 || ty >= BOARD_SIZE) continue;
+            const overwritten = mutable[ty]![tx]
+            if (overwritten !== null) {
+                overwrites++;
+                overwrittenTokens.push(overwritten)
+            }
+            mutable[ty]![tx] = tile.token;
+        }
+
+        return { board: new Board(mutable), overwrites, overwrittenTokens };
+    }
+
+    findSegments(): LineSegment[] {
+        const segments: LineSegment[] = [];
+
+        // Horizontal
+        for (let ty = 0; ty < BOARD_SIZE; ty++) {
+            let color: TokenSymbol | null = null;
+            let startTx = 0;
+            let length = 0;
+
+            for (let tx = 0; tx <= BOARD_SIZE; tx++) {
+                const cell = tx < BOARD_SIZE ? this.grid[ty]![tx] : null
+                const symbol = cell?.symbol ?? null
+                if (symbol !== null && symbol === color) {
+                    length++;
+                } else {
+                    if (color !== null && length >= MIN_SEGMENT_LENGTH) {
+                        segments.push({
+                            direction: 'horizontal',
+                            start: { tx: startTx, ty },
+                            length,
+                            color,
+                            segmentScore: SEGMENT_SCORE[length] ?? 0,
+                        });
+                    }
+                    color = symbol;
+                    startTx = tx;
+                    length = 1;
+                }
+            }
+        }
+
+        // Vertical
+        for (let tx = 0; tx < BOARD_SIZE; tx++) {
+            let color: TokenSymbol | null = null;
+            let startTy = 0;
+            let length = 0;
+
+            for (let ty = 0; ty <= BOARD_SIZE; ty++) {
+                const cell = ty < BOARD_SIZE ? this.grid[ty]![tx] : null
+                const symbol = cell?.symbol ?? null
+                if (symbol !== null && symbol === color) {
+                    length++;
+                } else {
+                    if (color !== null && length >= MIN_SEGMENT_LENGTH) {
+                        segments.push({
+                            direction: 'vertical',
+                            start: { tx, ty: startTy },
+                            length,
+                            color,
+                            segmentScore: SEGMENT_SCORE[length] ?? 0,
+                        });
+                    }
+                    color = symbol;
+                    startTy = ty;
+                    length = 1;
+                }
+            }
+        }
+
+        return segments;
+    }
+
+    clearSegments(segments: LineSegment[]): Board {
+        const mutable = this.grid.map(row => [...row]);
+        for (const seg of segments) {
+            for (let i = 0; i < seg.length; i++) {
+                if (seg.direction === 'horizontal') {
+                    mutable[seg.start.ty]![seg.start.tx + i] = null;
+                } else {
+                    mutable[seg.start.ty + i]![seg.start.tx] = null;
+                }
+            }
+        }
+        return new Board(mutable);
+    }
+}
+
+// ─── Scoring ──────────────────────────────────────────────────────────────────
+
+export interface RoundResult {
+    overwrittenTokens: IToken[];
+    segments: LineSegment[];
+    baseScore: number;
+    roundScore: number;
+    total: number;
+    boardAfterPlace: Board;
+    boardAfterClear: Board;
+}
+
+export function calcRoundResult(
+    previousTotal: number,
+    boardBefore: Board,
+    piece: IPiece,
+    pos: IPosition
+): RoundResult {
+    const { board: boardAfterPlace, overwrites, overwrittenTokens } = boardBefore.placePiece(piece, pos);
+    const segments = boardAfterPlace.findSegments();
+    const boardAfterClear = boardAfterPlace.clearSegments(segments);
+
+    const baseScore = segments.reduce((sum, s) => sum + s.segmentScore, 0);
+    const linesFormed = segments.length;
+    const theoreticalRoundScore = baseScore * linesFormed - overwrites;
+    const roundScore = Math.max(theoreticalRoundScore, -previousTotal);
+    const total = previousTotal + roundScore;
+
+    return { overwrittenTokens, segments, baseScore, roundScore, total, boardAfterPlace, boardAfterClear };
+}
+
+// ─── Game ─────────────────────────────────────────────────────────────────────
+
+export class Game {
+    readonly pieces: readonly IPiece[];
+    readonly seed: string;
+
+    constructor(seed: string, rounds: number = TOTAL_ROUNDS) {
+        this.seed = seed;
+        this.pieces = generatePieces(rounds, seed);
+    }
+
+    get totalRounds(): number {
+        return this.pieces.length;
+    }
+
+    getPiece(roundIndex: number): IPiece | null {
+        return this.pieces[roundIndex] ?? null;
+    }
+}
+
+// ─── GameState ────────────────────────────────────────────────────────────────
+
+/** Immutable snapshot of the game at a given round */
+export interface GameState {
+    readonly game: Game;
+    readonly roundIndex: number;
+    readonly board: Board;
+    readonly total: number;
+    readonly history: readonly RoundResult[];
+}
+
+export function initialGameState(game: Game): GameState {
+    return {
+        game,
+        roundIndex: 0,
+        board: new Board(),
+        total: 0,
+        history: [],
+    };
+}
+
+export function playRound(state: GameState, pos: IPosition): GameState {
+    const piece = state.game.getPiece(state.roundIndex);
+    if (!piece) return state; // no more pieces
+
+    const result = calcRoundResult(state.total, state.board, piece, pos);
+
+    return {
+        game: state.game,
+        roundIndex: state.roundIndex + 1,
+        board: result.boardAfterClear,
+        total: result.total,
+        history: [...state.history, result],
+    };
+}
+
+export function passRound(state: GameState): GameState {
+    const piece = state.game.getPiece(state.roundIndex);
+    if (!piece) return state;
+
+    return {
+        game: state.game,
+        roundIndex: state.roundIndex + 1,
+        board: state.board,
+        total: state.total,
+        history: state.history,
+    };
+}
+
+export function isGameOver(state: GameState): boolean {
+    return state.roundIndex >= state.game.totalRounds;
+}
+
+export function currentPiece(state: GameState): IPiece | null {
+    return state.game.getPiece(state.roundIndex);
+}

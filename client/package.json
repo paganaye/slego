@@ -1,0 +1,20 @@
+{
+  "name": "slego",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "🟠 publish-dev": "tsc && vite build && copyfiles public/* dist/ && rsync -avz dist/ -e \"ssh -p 5022\" ganazpbh@ganaye.com:public_html/slego/ && opener https://ganaye.com/slego"
+  },
+  "devDependencies": {
+    "@types/audioworklet": "^0.0.50",
+    "@types/socket.io-client": "^3.0.0",
+    "copyfiles": "^2.4.1",
+    "opener": "^1.5.2",
+    "typescript": "^5.9.3",
+    "vite": "^4.5.14"
+  }
+}

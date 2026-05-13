@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+    content="initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width, user-scalable=0" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="full-screen" content="yes" />
+  <meta name="x5-fullscreen" content="true" />
+  <meta name="360-fullscreen" content="true" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <style>
+    /* Light mode (default) */
+    :root {
+      --bg-color: 255 255 255;
+      --text-color: 0 0 0;
+      --yellow: rgb(255, 220, 0);
+      --bg-tutorial: oklab(0.94 0 0.09);
+      --red: #ff4444;
+      --blue: #4444ff;
+      --green: #44ff44;
+      --magenta: #ff44ff;
+      --btn-bg-color: #4444ff;
+    }
+
+    /* Dark Theme Definition */
+    html.theme-dark {
+      --bg-color: 0 0 0;
+      --text-color: 255 255 255;
+      --bg-tutorial: oklab(0.4 0 0.09);
+    }
+  </style>
+</head>
+
+<body>
+  <script type="module" src="main.tsx" defer></script>
+</body>
+
+</html>
