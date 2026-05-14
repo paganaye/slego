@@ -1,4 +1,4 @@
-import type { AppSettings } from './Settings'
+import type { AppSettings } from './SettingsData'
 import { DRAW_PILE_CENTER } from './Mat3D'
 import type { BoardGrid3D } from './BoardGrid3D'
 import type { PieceGrid3D } from './PieceGrid3D'

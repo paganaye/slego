@@ -13,7 +13,7 @@ import { addSceneLights, applySceneEnvironment, SCENE_BG, TONE_EXPOSURE } from '
 import { Sfx } from './Sfx'
 import { sounds, type Sound } from './sounds'
 import { Animations } from './Animations3D'
-import { loadSettings, saveSettings } from './Settings'
+import { loadSettings, saveSettings } from './SettingsData'
 import { Layout } from './Layout'
 import { PieceGrid3D } from './PieceGrid3D'
 import { BoardGrid3D } from './BoardGrid3D'
@@ -191,7 +191,9 @@ export class Scene3D {
     }
 
     playPosition(targetPos: IPosition) {
+        const previousTotal = this.#gameState.total
         this.#gameState = playRound(this.#gameState, targetPos)
+        this.scoreHud.updateScore(this.#gameState.total, previousTotal)
         this._applyScreenLayout(
             this.renderer.domElement.clientWidth,
             this.renderer.domElement.clientHeight
