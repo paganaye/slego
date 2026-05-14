@@ -1,4 +1,4 @@
-import type { AppSettings } from './SettingsData'
+import type { AppSettings } from './Settings'
 import { DRAW_PILE_CENTER } from './Mat3D'
 import type { BoardGrid3D } from './BoardGrid3D'
 import type { PieceGrid3D } from './PieceGrid3D'
@@ -28,7 +28,7 @@ export type SceneLayoutState = {
 const CELL_DIST = 1
 const BOARD_SIZE = 5 * CELL_DIST
 const CROSS_SIZE = 3 * CELL_DIST
-export const BOARD_CROSS_GAP = 0.75
+export const BOARD_CROSS_GAP = -0.5
 export const BOARD_MAT_GAP = 4
 const GAME_SIZE = BOARD_SIZE + CROSS_SIZE + BOARD_CROSS_GAP
 

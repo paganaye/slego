@@ -1,5 +1,5 @@
 import { createEffect } from 'solid-js'
-import { useTheme } from './SettingsContext'
+import { useTheme } from './Settings'
 
 export function ThemeApplier() {
   const theme = useTheme()

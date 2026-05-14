@@ -1,11 +1,11 @@
 import { TOKEN_SIZE } from './Token'
 
-export const INNER_WALL_THICKNESS = 0.1
-export const OUTER_WALL_THICKNESS = 0.4
+export const INNER_WALL_THICKNESS = 0.05
+export const OUTER_WALL_THICKNESS = 0.2
 
 export const GRID_MARGIN = {
-    x: 0.05,
-    y: 0.05
+    x: 0.02,
+    y: 0.02
 }
 
 export const GRID_CELL_DIST = {

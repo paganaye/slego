@@ -1,10 +1,9 @@
-import { createSignal, onCleanup, onMount } from 'solid-js'
+import { createSignal, onCleanup, onMount, createEffect } from 'solid-js'
 import './App.css'
 import { Game, initialGameState } from './Game'
 import type { GameState } from './Game'
 import { Scene3D } from './Scene3D'
-import { SettingsProvider } from './SettingsContext'
-import { SettingsModal } from './SettingsModal'
+import { SettingsProvider, SettingsModal, useSettings } from './Settings'
 import { ThemeApplier } from './ThemeApplier'
 
 const DEV_SEED = 'SLEGO_DEV_SEED_V2'
@@ -17,6 +16,7 @@ function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = createSignal(false)
   const [isSettingsOpen, setIsSettingsOpen] = createSignal(false)
   let containerRef: HTMLDivElement | undefined
+  const { settings } = useSettings()
 
   onMount(() => {
     if (!containerRef) return
@@ -24,6 +24,15 @@ function AppContent() {
     (window as any).slego = scene3d;
     scene3d.initializePhysicsAsync().catch(err => console.error('Physics initialization error:', err))
     onCleanup(() => scene3d?.dispose())
+  })
+
+  // Reload HDR when quality or environment setting changes
+  createEffect(() => {
+    const quality = settings().hdrQuality
+    const environment = settings().hdrEnvironment
+    if (scene3d) {
+      scene3d.reloadHDR(environment, quality)
+    }
   })
 
   return (

@@ -2,13 +2,9 @@ import * as THREE from 'three'
 import { currentPiece, pieceTokens } from './Game'
 import type { IPosition, LineSegment, Board } from './Game'
 import { FALL_GRAVITY, FALL_MAX_SPEED } from './PhysicsConfig'
-import { BOARD_Z_PER_ROUND, BOARD_Z_MAX } from './Layout'
 import type { Scene3D } from './Scene3D'
 import { sounds } from './sounds'
 import { Token, TOKEN_SIZE } from './Token'
-
-const easeInOut = (p: number) => p < 0.5 ? 2 * p * p : -1 + (4 - 2 * p) * p
-const overshoot = (p: number) => { const q = p - 1; return 1 + (2.70158) * q * q * q + (1.70158) * q * q }
 
 type FallingToken = {
     token: Token
@@ -119,11 +115,11 @@ export class Animations {
     }
 
     async advanceBoardZ() {
-        const startZ = this.scene.boardZ
-        const targetZ = Math.max(BOARD_Z_MAX, this.scene.gameState.history.length * BOARD_Z_PER_ROUND)
-        await this.animateFor({ duration: 1 }, (p) => {
-            this.scene.boardZ = startZ + (targetZ - startZ) * overshoot(p)
-        })
+        // const startZ = this.scene.boardZ
+        // const targetZ = Math.max(BOARD_Z_MAX, this.scene.gameState.history.length * BOARD_Z_PER_ROUND)
+        // await this.animateFor({ duration: 1 }, (p) => {
+        //             this.scene.boardZ = startZ + (targetZ - startZ) * overshoot(p)
+        // })
     }
 
     async animateCreatedSegments(segments: LineSegment[], board: Board) {

@@ -9,11 +9,11 @@ import { TOKEN_SIZE } from './Token'
 import type { Token } from './Token'
 import type { MeshUserData } from './MeshUserData'
 import { Mat3D, MAT_SIZE } from './Mat3D'
-import { addSceneLights, applySceneEnvironment, SCENE_BG, TONE_EXPOSURE } from './Scene3DLights'
+import { addSceneLights, applySceneEnvironment, loadHDREnvironment, SCENE_BG, TONE_EXPOSURE } from './Scene3DLights'
 import { Sfx } from './Sfx'
 import { sounds, type Sound } from './sounds'
 import { Animations } from './Animations3D'
-import { loadSettings, saveSettings } from './SettingsData'
+import { loadSettings, saveSettings } from './Settings'
 import { Layout } from './Layout'
 import { PieceGrid3D } from './PieceGrid3D'
 import { BoardGrid3D } from './BoardGrid3D'
@@ -121,10 +121,23 @@ export class Scene3D {
         this.envTexture = this.pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture
         applySceneEnvironment(this.#threeScene, this.envTexture)
 
+        // Load HDR environment based on environment and quality settings
+        const hdrPath = `/hdr/${this.settings.hdrEnvironment}_${this.settings.hdrQuality}.hdr`
+        loadHDREnvironment(this.#threeScene, this.renderer, hdrPath).catch(err => {
+            console.warn('Failed to load HDR environment:', err)
+        })
+
         this.controls = new OrbitControls(this.camera, this.renderer.domElement)
         this.controls.target.set(ORBIT_TARGET.x, ORBIT_TARGET.y, ORBIT_TARGET.z)
         this.controls.enableDamping = true
         this.controls.dampingFactor = 0.08
+        this.controls.enableZoom = true
+        this.controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE
+        this.controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY
+        this.controls.mouseButtons.RIGHT = THREE.MOUSE.PAN
+        this.controls.minDistance = 0.2
+        this.controls.maxDistance = 60
+        this.controls.autoRotate = false
         this.controls.update()
 
         this.layout.compute(container.clientWidth, container.clientHeight, this.settings)
@@ -157,6 +170,15 @@ export class Scene3D {
         this.renderer.domElement.addEventListener('pointerup', this._onPointerUp)
         this.renderer.domElement.addEventListener('pointercancel', this._onPointerCancel)
         this._renderLoop()
+    }
+
+    async reloadHDR(environment: string, quality: string) {
+        const hdrPath = `/hdr/${environment}_${quality}.hdr`
+        try {
+            await loadHDREnvironment(this.#threeScene, this.renderer, hdrPath)
+        } catch (err) {
+            console.warn('Failed to reload HDR environment:', err)
+        }
     }
 
     async initializePhysicsAsync() {
@@ -210,11 +232,14 @@ export class Scene3D {
         const so = this.layout.state.scoreOrigin
         this.scoreHud.setDestinationPosition({ x: so.x, y: so.y, z: so.z + z })
     }
-    get boardZ() { return this.#boardZ }
+    get boardZ() {
+        return this.#boardZ
+    }
 
 
     private _onPointerDown = (event: PointerEvent) => {
         //if (this.animations.animation || !this.piece3d.group.visible) return
+        if (event.button !== 0) return
 
         this._setPointerFromClient(event.clientX, event.clientY)
         const hits = this._raycastHits()
@@ -586,11 +611,11 @@ export class Scene3D {
             stack3d: this.mat3D,
             scoreHud: this.scoreHud,
         }, immediate, this.#boardZ)
+        if (immediate) this.camera.position.z = this.layout.state.cameraZ + this.#boardZ
         this.dragPlane.constant = -(this.#boardZ + TOKEN_SIZE.z)
         this.controls.target.z = this.#boardZ
 
         // if (!this.isDraggingCross && !this.animations.animation && this.piece3d.group.visible) {
-        //     this.piece3d.setDestinationPosition({ x: this.layoutState.crossCenter.x, y: this.layoutState.crossCenter.y, z: TOKEN_SIZE.z })
         // }
     }
 
@@ -637,7 +662,6 @@ export class Scene3D {
         //     this.piece3d.snapTo(this.piece3d.group.position)
         // }
         this.updatePieceGridMotion(dt)
-        this.camera.position.z = this.layout.state.cameraZ + this.#boardZ
         this.controls.update()
 
 

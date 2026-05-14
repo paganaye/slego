@@ -1,8 +1,9 @@
 import * as THREE from 'three'
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js'
 
 type Vec3Like = { x: number; y: number; z: number }
 
-const ENABLE_IMAGE_BASED_LIGHTING = false
+const ENABLE_IMAGE_BASED_LIGHTING = true
 // ── Scene ───────────────────────────────────────────────────
 export const SCENE_BG = 0x04080F //0x101828
 export const TONE_EXPOSURE = 0.5
@@ -20,6 +21,18 @@ const SPARKLE_LIGHT_INTENSITY = 0.3
 
 export function applySceneEnvironment(scene: THREE.Scene, envTexture: THREE.Texture) {
     scene.environment = ENABLE_IMAGE_BASED_LIGHTING ? envTexture : null
+}
+
+export async function loadHDREnvironment(scene: THREE.Scene, renderer: THREE.WebGLRenderer, hdrPath: string): Promise<void> {
+    const loader = new RGBELoader()
+    const texture = await loader.loadAsync(hdrPath)
+    
+    const pmremGenerator = new THREE.PMREMGenerator(renderer)
+    const envMap = pmremGenerator.fromEquirectangular(texture).texture
+    pmremGenerator.dispose()
+    
+    scene.background = envMap
+    scene.environment = envMap
 }
 
 export function addSceneLights(parent: THREE.Object3D, boardPos: Vec3Like): THREE.Group {

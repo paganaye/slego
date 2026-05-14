@@ -10,8 +10,8 @@ export const TOKEN_RADIUS = 0.10
 
 // Symbols
 const USE_HOLLOW_SYMBOLS = true
-const PEN_WIDTH = 0.18
-const SYMBOL_SCALE = (TOKEN_SIZE.x - TOKEN_RADIUS * 2) * 0.85
+const PEN_WIDTH = 0.2
+const SYMBOL_SCALE = (TOKEN_SIZE.x - TOKEN_RADIUS * 2) * 0.8
 export const SYMBOL_CUT_DEPTH = 0.038
 
 // ─── Symbol shapes ────────────────────────────────────────────
@@ -191,11 +191,13 @@ export class Token {
             const csgTokenMaterial = new THREE.MeshBasicMaterial();
             const shape = buildSymbolShape(kind);
 
-            const cutterGeometry = new THREE.ExtrudeGeometry(shape, { depth: SYMBOL_CUT_DEPTH + 0.02, bevelEnabled: false });
+            const cutterDepth = SYMBOL_CUT_DEPTH + 0.02
+            const cutterGeometry = new THREE.ExtrudeGeometry(shape, { depth: cutterDepth, bevelEnabled: false });
             cutterGeometry.center();
             const cutterMaterial = new THREE.MeshBasicMaterial();
             const cutterMesh = new THREE.Mesh(cutterGeometry, cutterMaterial);
-            cutterMesh.position.z = TOKEN_SIZE.z / 2 - SYMBOL_CUT_DEPTH + 0.01;
+            const cutterTopZ = TOKEN_SIZE.z / 2 + 0.001
+            cutterMesh.position.z = cutterTopZ - cutterDepth / 2
 
             const tokenMesh = new THREE.Mesh(tokenGeometry, csgTokenMaterial);
             tokenMesh.updateMatrix();
