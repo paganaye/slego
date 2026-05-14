@@ -224,6 +224,7 @@ export function SoundDesigner() {
     let playbackDurationMs = 0
     let playbackPreviewParams: ZzfxParams | null = null
     let heldNote: { stop: (when?: number) => void } | null = null
+    var mouseButtonIsDown = false
 
 
     const setStatusTemporarily = (text: string) => {
@@ -496,15 +497,14 @@ export function SoundDesigner() {
             stopPlayheadAnimation()
             if (!queuedParams) {
                 playbackPreviewParams = null
-                if (typeof window !== 'undefined' && (window as any).mouseButtonIsDown) setTimeout(() => playSound(params()), 250);
+                if (mouseButtonIsDown) setTimeout(() => playSound(params()), 250)
                 return
             }
             const next = queuedParams
             queuedParams = null
             playbackPreviewParams = null
-            setTimeout(() => playSound(next), 500);
+            setTimeout(() => playSound(next), 500)
         }
-
 
         try {
             const note = zzfx(...value) as { onended?: (() => void) | null }
@@ -546,7 +546,10 @@ export function SoundDesigner() {
         newParams[index] = value
         setParams(newParams)
         pushHistory(newParams)
-        playSound(newParams)
+        if (!mouseButtonIsDown) {
+            playSound(newParams)
+        }
+        // If mouseButtonIsDown, the held note or auto-replay will reflect the new params
     }
 
     const undo = () => {
@@ -616,12 +619,16 @@ export function SoundDesigner() {
 
         const onBodyPointerDown = (event: PointerEvent) => {
             if (event.button !== 0) return
-            const target = event.target
-            if (target instanceof Element && target.closest('button, input, select, textarea, a')) return
+            //const target = event.target
+            //if (target instanceof Element && target.closest('button, input, select, textarea, a')) return
+            mouseButtonIsDown = true
             playHeldNote()
         }
 
-        const onPointerRelease = () => stopHeldNote()
+        const onPointerRelease = () => {
+            mouseButtonIsDown = false
+            stopHeldNote()
+        }
 
         document.body.addEventListener('pointerdown', onBodyPointerDown)
         window.addEventListener('pointerup', onPointerRelease)
@@ -633,6 +640,7 @@ export function SoundDesigner() {
             window.removeEventListener('pointerup', onPointerRelease)
             window.removeEventListener('pointercancel', onPointerRelease)
             window.removeEventListener('blur', onPointerRelease)
+            mouseButtonIsDown = false
             stopHeldNote()
         })
     })
