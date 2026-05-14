@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">SLEGO</string>
+    <string name="welcome">Welcome to SLEGO for Android</string>
+    <string name="play">Play</string>
+    <string name="about">About</string>
+    <string name="quit">Quit</string>
+</resources>

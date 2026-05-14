@@ -1,0 +1,39 @@
+apply plugin: 'com.android.application'
+
+android {
+
+    signingConfigs {
+        debug {
+            storeFile file('D:\\code\\secret\\android-studio-keystore.jks')
+            storePassword '43R2-54*d-sf+X-BVCF-QS5D'
+            keyAlias 'slego4'
+            keyPassword 'TT43-5!23-tyYY-ccDD-Jk5HG'
+        }
+    }
+    compileSdkVersion 30
+
+    defaultConfig {
+        applicationId "com.ganaye.slego4"
+        minSdkVersion 14
+        //noinspection ExpiredTargetSdkVersion
+        targetSdkVersion 30
+        versionCode 4_001_001
+        versionName "4.1.1"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+//    implementation fileTree(dir: "libs", include: ["*.jar"])
+}

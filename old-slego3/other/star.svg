@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg" xmlns:bx="https://boxy-svg.com">
+  <defs>
+    <radialGradient id="gradient-3" gradientUnits="userSpaceOnUse" cx="27.097" cy="26.975" r="27.097">
+      <stop offset="0" style="stop-color: rgba(255, 238, 0, 1)"/>
+      <stop offset="1" style="stop-color: rgba(153, 143, 0, 1)"/>
+    </radialGradient>
+  </defs>
+  <path d="M 27.097 0 L 33.796 20.171 L 54.194 20.606 L 37.936 33.508 L 43.844 53.949 L 27.097 41.751 L 10.35 53.949 L 16.258 33.508 L 0 20.606 L 20.398 20.171 Z" style="stroke-width: 2; fill: url(#gradient-3); stroke-linecap: round; stroke-linejoin: round; stroke: rgb(177, 177, 177);" transform="matrix(0.984808, 0.173648, -0.173648, 0.984808, 5.095734, -4.295516)" bx:shape="star 27.097 29.822 28.491 29.822 0.4 5 1@6b635be3"/>
+</svg>

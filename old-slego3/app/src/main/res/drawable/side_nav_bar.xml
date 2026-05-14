@@ -1,0 +1,11 @@
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:shape="rectangle">
+    <gradient
+        android:angle="90"
+        android:centerColor="#4e67e3"
+        android:endColor="#80ffffff"
+        android:startColor="#2e2783"
+        android:type="linear"
+        tools:context="com.ganaye.slego3.MainActivity" />
+</shape>
