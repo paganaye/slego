@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, onMount } from 'solid-js'
+import { createEffect, createSignal, For, onCleanup, onMount } from 'solid-js'
 import { ZZFX, zzfx } from 'zzfx'
 import {
     DefaultSounds,
@@ -29,22 +29,22 @@ type ParamSpec = {
 type ParamGroup = typeof paramSpecs[number]['group'];
 
 const paramSpecs: ParamSpec[] = [
-    { key: 'frequency', index: ZzfxParam.frequency, group: 'Frequency', min: 20, max: 4000, step: 10 },
+    { key: 'frequency', index: ZzfxParam.frequency, group: 'Frequency', min: 20, max: 4000, step: 10, unit: 'Hz' },
     { key: 'randomness', index: ZzfxParam.randomness, group: 'Frequency', min: 0, max: 100, step: 1, valueScale: 100, unit: '%' },
-    { key: 'slide', index: ZzfxParam.slide, group: 'Slide', min: -1, max: 1, step: 0.01 },
-    { key: 'deltaSlide', index: ZzfxParam.deltaSlide, group: 'Slide', min: -1, max: 1, step: 0.01 },
-    { key: 'pitchJump', index: ZzfxParam.pitchJump, group: 'Pitch', min: 0, max: 1, step: 0.01 },
-    { key: 'pitchJumpTime', index: ZzfxParam.pitchJumpTime, group: 'Pitch', min: 0, max: 1, step: 0.01 },
+    { key: 'slide', index: ZzfxParam.slide, group: 'Slide', min: -2, max: 2, step: 0.01 },
+    { key: 'deltaSlide', index: ZzfxParam.deltaSlide, group: 'Slide', min: -2, max: 2, step: 0.01 },
+    { key: 'pitchJump', index: ZzfxParam.pitchJump, group: 'Pitch', min: -440, max: 440, step: 0.01, unit: 'Hz' },
+    { key: 'pitchJumpTime', index: ZzfxParam.pitchJumpTime, group: 'Pitch', min: 0, max: 1000, step: 10, valueScale: 1000, unit: 'ms' },
 
     { key: 'volume', index: ZzfxParam.volume, group: 'Amplitude', min: 0, max: 1, step: 0.01, color: 'hsl(35, 85%, 55%)' },
     { key: 'sustainVolume', index: ZzfxParam.sustainVolume, group: 'Amplitude', min: 0, max: 1, step: 0.01, color: 'hsl(130, 75%, 50%)' },
 
-    { key: 'delay', index: ZzfxParam.delay, group: 'Duration', min: 0, max: 0.5, step: 0.01, color: 'hsl(0, 80%, 55%)' },
-    { key: 'attack', index: ZzfxParam.attack, group: 'Duration', min: 0, max: 1, step: 0.01, color: 'hsl(35, 85%, 55%)' },
-    { key: 'decay', index: ZzfxParam.decay, group: 'Duration', min: 0, max: 1, step: 0.01, color: 'hsl(60, 90%, 55%)' },
-    { key: 'sustain', index: ZzfxParam.sustain, group: 'Duration', min: 0, max: 1, step: 0.01, color: 'hsl(130, 75%, 50%)' },
-    { key: 'release', index: ZzfxParam.release, group: 'Duration', min: 0, max: 0.5, step: 0.01, color: 'hsl(210, 80%, 55%)' },
-    { key: 'repeatTime', index: ZzfxParam.repeatTime, group: 'Duration', min: 0, max: 1, step: 0.01, color: 'hsl(280, 80%, 55%)' },
+    { key: 'delay', index: ZzfxParam.delay, group: 'Duration', min: 0, max: 500, step: 10, valueScale: 1000, unit: 'ms', color: 'hsl(0, 80%, 55%)' },
+    { key: 'attack', index: ZzfxParam.attack, group: 'Duration', min: 0, max: 1000, step: 10, valueScale: 1000, unit: 'ms', color: 'hsl(35, 85%, 55%)' },
+    { key: 'decay', index: ZzfxParam.decay, group: 'Duration', min: 0, max: 1000, step: 10, valueScale: 1000, unit: 'ms', color: 'hsl(60, 90%, 55%)' },
+    { key: 'sustain', index: ZzfxParam.sustain, group: 'Duration', min: 0, max: 1000, step: 10, valueScale: 1000, unit: 'ms', color: 'hsl(130, 75%, 50%)' },
+    { key: 'release', index: ZzfxParam.release, group: 'Duration', min: 0, max: 500, step: 10, valueScale: 1000, unit: 'ms', color: 'hsl(210, 80%, 55%)' },
+    { key: 'repeatTime', index: ZzfxParam.repeatTime, group: 'Duration', min: 0, max: 1000, step: 10, valueScale: 1000, unit: 'ms', color: 'hsl(280, 80%, 55%)' },
 
     { key: 'shape', index: ZzfxParam.shape, group: 'Timbre', min: 0, max: 5, step: 1, color: 'hsl(295, 80%, 60%)' },
     { key: 'shapeCurve', index: ZzfxParam.shapeCurve, group: 'Timbre', min: 0, max: 2, step: 0.1, color: 'hsl(332, 80%, 60%)' },
@@ -216,6 +216,14 @@ export function SoundDesigner() {
     let previewCanvas: HTMLCanvasElement | undefined
     let amplitudeCanvas: HTMLCanvasElement | undefined
     let timbreCanvas: HTMLCanvasElement | undefined
+    let isSoundPlaying = false
+    let queuedParams: ZzfxParams | null = null
+    let releasePlaybackTimer: number | undefined
+    let playheadRafId: number | undefined
+    let playbackStartedAtMs = 0
+    let playbackDurationMs = 0
+    let playbackPreviewParams: ZzfxParams | null = null
+    let heldNote: { stop: (when?: number) => void } | null = null
 
 
     const setStatusTemporarily = (text: string) => {
@@ -242,7 +250,7 @@ export function SoundDesigner() {
         setHistoryIndex(cappedHistory.length - 1)
     }
 
-    const drawPreview = (current: ZzfxParams) => {
+    const drawPreview = (current: ZzfxParams, playheadProgress?: number) => {
         if (!previewCanvas) return
         const context = previewCanvas.getContext('2d')
         if (!context) return
@@ -295,6 +303,17 @@ export function SoundDesigner() {
             else context.lineTo(x, y)
         }
         context.stroke()
+
+        if (playheadProgress !== undefined) {
+            const clamped = Math.max(0, Math.min(1, playheadProgress))
+            const x = clamped * width
+            context.strokeStyle = 'rgba(255,255,255,0.9)'
+            context.lineWidth = 1.5
+            context.beginPath()
+            context.moveTo(x, 0)
+            context.lineTo(x, height)
+            context.stroke()
+        }
     }
 
     const drawAmplitudeEnvelope = (current: ZzfxParams) => {
@@ -415,15 +434,112 @@ export function SoundDesigner() {
         }
     }
 
+    const estimatePlaybackMs = (value: ZzfxParams) => {
+        const delay = Math.max(0, value[ZzfxParam.delay] ?? 0)
+        const attack = Math.max(0, value[ZzfxParam.attack] ?? 0)
+        const decay = Math.max(0, value[ZzfxParam.decay] ?? 0)
+        const sustain = Math.max(0, value[ZzfxParam.sustain] ?? 0)
+        const release = Math.max(0, value[ZzfxParam.release] ?? 0)
+        return Math.max(25, (delay + attack + decay + sustain + release) * 1000 + 20)
+    }
+
+    const getPlayheadProgress = () => {
+        if (!isSoundPlaying || playbackDurationMs <= 0) return undefined
+        return (performance.now() - playbackStartedAtMs) / playbackDurationMs
+    }
+
+    const stopPlayheadAnimation = () => {
+        if (playheadRafId !== undefined) {
+            window.cancelAnimationFrame(playheadRafId)
+            playheadRafId = undefined
+        }
+    }
+
+    const startPlayheadAnimation = () => {
+        stopPlayheadAnimation()
+        const tick = () => {
+            const previewParams = playbackPreviewParams ?? params()
+            drawPreview(previewParams, getPlayheadProgress())
+            if (!isSoundPlaying) {
+                playheadRafId = undefined
+                return
+            }
+            playheadRafId = window.requestAnimationFrame(tick)
+        }
+        playheadRafId = window.requestAnimationFrame(tick)
+    }
+
+    const clearPlaybackTimer = () => {
+        if (releasePlaybackTimer !== undefined) {
+            window.clearTimeout(releasePlaybackTimer)
+            releasePlaybackTimer = undefined
+        }
+    }
+
     const playSound = (value = params()) => {
+        if (isSoundPlaying) {
+            queuedParams = cloneParams(value)
+            return
+        }
+
+        isSoundPlaying = true
+        playbackPreviewParams = cloneParams(value)
+        playbackStartedAtMs = performance.now()
+        playbackDurationMs = estimatePlaybackMs(value)
+        startPlayheadAnimation()
+        let released = false
+        const releaseAndPlayQueued = () => {
+            if (released) return
+            released = true
+            isSoundPlaying = false
+            clearPlaybackTimer()
+            stopPlayheadAnimation()
+            if (!queuedParams) {
+                playbackPreviewParams = null
+                if (typeof window !== 'undefined' && (window as any).mouseButtonIsDown) setTimeout(() => playSound(params()), 250);
+                return
+            }
+            const next = queuedParams
+            queuedParams = null
+            playbackPreviewParams = null
+            setTimeout(() => playSound(next), 500);
+        }
+
+
         try {
-            zzfx(...value)
+            const note = zzfx(...value) as { onended?: (() => void) | null }
+            if (note && 'onended' in note) note.onended = releaseAndPlayQueued
+            releasePlaybackTimer = window.setTimeout(releaseAndPlayQueued, estimatePlaybackMs(value))
         } catch (error) {
             console.error('Error playing sound:', error)
+            releaseAndPlayQueued()
         }
     }
 
     const playCurrentSound = () => playSound(params())
+
+    const stopHeldNote = () => {
+        if (!heldNote) return
+        try {
+            heldNote.stop()
+        } catch (error) {
+            console.error('Error stopping held note:', error)
+        }
+        heldNote = null
+    }
+
+    const playHeldNote = () => {
+        stopHeldNote()
+        const heldParams = cloneParams(params())
+        heldParams[ZzfxParam.sustain] = Math.max(heldParams[ZzfxParam.sustain], 30)
+        heldParams[ZzfxParam.release] = Math.max(heldParams[ZzfxParam.release], 0.03)
+        try {
+            heldNote = zzfx(...heldParams) as { stop: (when?: number) => void }
+        } catch (error) {
+            console.error('Error playing held note:', error)
+            heldNote = null
+        }
+    }
 
     const updateParam = (index: number, value: number) => {
         const newParams = cloneParams(params())
@@ -497,11 +613,35 @@ export function SoundDesigner() {
         drawPreview(initial)
         drawAmplitudeEnvelope(initial)
         drawTimbrePreview(initial)
+
+        const onBodyPointerDown = (event: PointerEvent) => {
+            if (event.button !== 0) return
+            const target = event.target
+            if (target instanceof Element && target.closest('button, input, select, textarea, a')) return
+            playHeldNote()
+        }
+
+        const onPointerRelease = () => stopHeldNote()
+
+        document.body.addEventListener('pointerdown', onBodyPointerDown)
+        window.addEventListener('pointerup', onPointerRelease)
+        window.addEventListener('pointercancel', onPointerRelease)
+        window.addEventListener('blur', onPointerRelease)
+
+        onCleanup(() => {
+            document.body.removeEventListener('pointerdown', onBodyPointerDown)
+            window.removeEventListener('pointerup', onPointerRelease)
+            window.removeEventListener('pointercancel', onPointerRelease)
+            window.removeEventListener('blur', onPointerRelease)
+            stopHeldNote()
+        })
     })
+
+    onCleanup(() => clearPlaybackTimer())
 
     createEffect(() => {
         const current = params()
-        drawPreview(current)
+        drawPreview(current, getPlayheadProgress())
         drawAmplitudeEnvelope(current)
         drawTimbrePreview(current)
     })
