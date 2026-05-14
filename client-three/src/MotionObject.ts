@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { Scene3D } from './Scene3D'
 
-const DEBUG_MOTION = true
+const DEBUG_MOTION = false;
 
 export type MotionConfig = {
     acceleration: number

@@ -97,12 +97,12 @@ export class Layout {
             z: boardZ,
         })
         targets.stack3d.setDestinationPosition(layoutState.matOrigin)
-        targets.scoreHud.setDestinationPosition(layoutState.scoreOrigin)
+        targets.scoreHud.setDestinationPosition({ ...layoutState.scoreOrigin, z: layoutState.scoreOrigin.z + boardZ })
 
         if (!immediate) return
         targets.boardGrid3d.snapTo({ ...layoutState.boardOrigin, z: boardZ })
         targets.pieceGrid3d.snapTo({ x: layoutState.crossCenter.x, y: layoutState.crossCenter.y, z: boardZ })
         targets.stack3d.snapTo(layoutState.matOrigin)
-        targets.scoreHud.snapTo(layoutState.scoreOrigin)
+        targets.scoreHud.snapTo({ ...layoutState.scoreOrigin, z: layoutState.scoreOrigin.z + boardZ })
     }
 }

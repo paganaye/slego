@@ -205,6 +205,8 @@ export class Scene3D {
         this.boardGrid3d.setDestinationPosition({ x: this.layout.state.boardOrigin.x, y: this.layout.state.boardOrigin.y, z })
         this.pieceGrid3d.setRestPosition({ x: this.layout.state.crossCenter.x, y: this.layout.state.crossCenter.y, z })
         this.pieceGrid3d.setDestinationPosition({ x: this.layout.state.crossCenter.x, y: this.layout.state.crossCenter.y, z })
+        const so = this.layout.state.scoreOrigin
+        this.scoreHud.setDestinationPosition({ x: so.x, y: so.y, z: so.z + z })
     }
     get boardZ() { return this.#boardZ }
 

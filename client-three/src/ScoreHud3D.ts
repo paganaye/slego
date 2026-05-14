@@ -143,7 +143,7 @@ export class ScoreHud3D extends MotionObject {
         ctx.closePath()
         ctx.fill()
         ctx.fillStyle = color
-        ctx.font = '700 56px sans-serif'
+        ctx.font = '700 56px "Edu TAS Beginner", sans-serif'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText(text, canvas.width / 2, canvas.height / 2)
