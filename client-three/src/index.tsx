@@ -3,6 +3,7 @@ import { render } from 'solid-js/web';
 import { App } from './App';
 import TestPage from './TestPage';
 import { createSignal } from 'solid-js';
+import { SoundDesigner } from './SoundDesigner';
 
 const root = document.getElementById('root');
 
@@ -11,7 +12,10 @@ function Router() {
     switch (route().toLowerCase()) {
         case '/test':
             return <TestPage />;
+        case '/zzfx':
+            return <SoundDesigner />;
         case '/':
+
         default:
             return <App />;
 
