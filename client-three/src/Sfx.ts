@@ -1,4 +1,3 @@
-
 import type { Sound } from './sounds'
 import { sfxr } from 'jsfxr'
 

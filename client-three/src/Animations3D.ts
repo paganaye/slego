@@ -43,7 +43,7 @@ export class Animations {
         })
 
         this.scene.pickupCurrentPiece()
-        this.scene.playSound(sounds.Spawn)
+        this.scene.playSound(sounds.spawn)
 
         const restPos = this.scene.pieceRestZone()
         const restOrientation = { x: 0, y: 0, z: 0 }
@@ -53,7 +53,7 @@ export class Animations {
             orientation: restOrientation,
         })
 
-        this.scene.playSound(sounds.PieceArrived)
+        this.scene.playSound(sounds.pieceArrived)
     }
 
     clear() {

@@ -162,7 +162,6 @@ export class Scene3D {
         // this.board3d.build(state)
         this.mat3D.createTokens(state)
         this.animations.startNextPieceSpawn()
-        this.scoreHud.updateScore(state.total, 0)
 
         window.addEventListener('resize', this._onResize)
         this.renderer.domElement.addEventListener('pointerdown', this._onPointerDown)
@@ -184,7 +183,7 @@ export class Scene3D {
     async initializePhysicsAsync() {
         try {
             await initRapier()
-            this.rapierWorld = new RapierPhysicsWorld()
+            this.rapierWorld = new RapierPhysicsWorld(this)
             // Mat collider is the primary landing surface for thrown/falling tokens.
             this.rapierWorld.createMatCollider(
                 MAT_SIZE.x,
@@ -215,7 +214,6 @@ export class Scene3D {
     playPosition(targetPos: IPosition) {
         const previousTotal = this.#gameState.total
         this.#gameState = playRound(this.#gameState, targetPos)
-        this.scoreHud.updateScore(this.#gameState.total, previousTotal)
         this._applyScreenLayout(
             this.renderer.domElement.clientWidth,
             this.renderer.domElement.clientHeight
@@ -257,7 +255,7 @@ export class Scene3D {
         this.wasSnapped = false
         this.controls.enabled = false
         this.renderer.domElement.setPointerCapture(event.pointerId)
-        this.playSound(sounds.DragStart)
+        this.playSound(sounds.dragStart)
         this._onPointerMove(event);
     }
 
@@ -276,14 +274,14 @@ export class Scene3D {
             this.pieceGrid3d.setPosition(targetWorld)
             this._setCrossOpacity(1)
             if (!this.wasSnapped) {
-                this.playSound(sounds.DragSnap)
+                this.playSound(sounds.dragSnap)
                 this.wasSnapped = true
             }
             this.draggedTargetPos = snap.pos
             return
         } else {
             if (this.wasSnapped) {
-                this.playSound(sounds.DragStart)
+                this.playSound(sounds.dragStart)
                 this.wasSnapped = false
                 this.draggedTargetPos = null
             }
@@ -337,12 +335,12 @@ export class Scene3D {
 
         if (targetPos) {
             this._setCrossOpacity(1)
-            this.playSound(sounds.DropValid)
+            this.playSound(sounds.dropValid)
             this.animations.playerStamp(targetPos)
             return
         }
 
-        this.playSound(sounds.DropInvalid)
+        this.playSound(sounds.dropInvalid)
         this._setCrossOpacity(1)
         // this.piece3d.snapTo(this.piece3d.group.position)
         // this.piece3d.setDestinationPosition(this.dragStartPos)

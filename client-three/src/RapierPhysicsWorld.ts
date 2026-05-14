@@ -8,6 +8,8 @@ import RAPIER from '@dimforge/rapier3d-compat'
 import * as THREE from 'three'
 import { FALL_GRAVITY } from './PhysicsConfig'
 import { TOKEN_SIZE } from './Token'
+import { Scene3D } from './Scene3D';
+import { sounds } from './sounds';
 
 export interface RigidBodyHandle {
     handle: RAPIER.RigidBodyHandle
@@ -33,8 +35,10 @@ export class RapierPhysicsWorld {
     private rigidBodies: Map<number, THREE.Vector3> = new Map()
     private boardBodyHandle: RAPIER.RigidBodyHandle | null = null
     private matBodyHandle: RAPIER.RigidBodyHandle | null = null
+    private eventQueue: RAPIER.EventQueue;
 
-    constructor() {
+    constructor(readonly scene: Scene3D) {
+
         if (!rapierModule) {
             throw new Error('Rapier not initialized. Call initRapier() first.')
         }
@@ -45,6 +49,7 @@ export class RapierPhysicsWorld {
 
         // Configure world parameters
         this.world.timestep = 1 / 60  // 60 FPS
+        this.eventQueue = new rapierModule.EventQueue(true);
     }
 
     /**
@@ -60,17 +65,17 @@ export class RapierPhysicsWorld {
             const previous = this.world.getRigidBody(this.boardBodyHandle)
             if (previous) this.world.removeRigidBody(previous)
         }
-        
+
         const boardDesc = rapierModule!.RigidBodyDesc.fixed()
             .setTranslation(boardX, boardY, 0)
         const boardBody = this.world.createRigidBody(boardDesc)
         this.boardBodyHandle = boardBody.handle
-        
+
         // Collider matches actual board grid dimensions (5x5 grid with walls/cavities)
         const boardCollider = rapierModule!.ColliderDesc.cuboid(boardWidth / 2, boardDepth / 2, boardDepth / 2)
             .setRestitution(0.1)
             .setFriction(0.8)
-        
+
         this.world.createCollider(boardCollider, boardBody)
     }
 
@@ -148,16 +153,19 @@ export class RapierPhysicsWorld {
             .setRestitution(0.08)
             .setFriction(0.9)
             .setFrictionCombineRule(rapierModule!.CoefficientCombineRule.Average)
+            .setActiveEvents(rapierModule!.ActiveEvents.COLLISION_EVENTS);
 
-        const rigidBody = this.world.createRigidBody(rigidBodyDesc)
-        this.world.createCollider(colliderDesc, rigidBody)
+        const rigidBody: RAPIER.RigidBody = this.world.createRigidBody(rigidBodyDesc);
+        // Set userData for identification in collision events
+        (rigidBody as any).userData = { type: 'token' };
+        this.world.createCollider(colliderDesc, rigidBody);
 
-        this.rigidBodies.set(rigidBody.handle, position.clone())
+        this.rigidBodies.set(rigidBody.handle, position.clone());
 
         return {
             handle: rigidBody.handle,
             body: rigidBody,
-        }
+        };
     }
 
     /**
@@ -165,7 +173,20 @@ export class RapierPhysicsWorld {
      */
     step(dt: number) {
         this.world.timestep = dt
-        this.world.step()
+        this.world.step(this.eventQueue);
+
+        this.eventQueue.drainCollisionEvents((handle1: number, handle2: number, started: boolean) => {
+            if (started) {
+                const body1 = this.world.getRigidBody(handle1);
+                const body2 = this.world.getRigidBody(handle2);
+
+                if (body1 && body2) {
+                    console.log('Collision detected between:', body1, body2);
+                    // Play sound for all collisions (or add logic here if needed)
+                    this.scene.playSound(sounds.collision);
+                }
+            }
+        });
     }
 
     /**

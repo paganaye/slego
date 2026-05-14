@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js'
+import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js'
 
 type Vec3Like = { x: number; y: number; z: number }
 
@@ -24,7 +24,7 @@ export function applySceneEnvironment(scene: THREE.Scene, envTexture: THREE.Text
 }
 
 export async function loadHDREnvironment(scene: THREE.Scene, renderer: THREE.WebGLRenderer, hdrPath: string): Promise<void> {
-    const loader = new RGBELoader()
+    const loader = new HDRLoader()
     const texture = await loader.loadAsync(hdrPath)
     
     const pmremGenerator = new THREE.PMREMGenerator(renderer)

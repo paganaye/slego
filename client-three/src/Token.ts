@@ -157,7 +157,7 @@ export class Token {
     originPiece: IPiece | null
     originTile: IPieceToken | null
     location: TokenLocation
-    
+
     constructor(
         readonly kind: TokenSymbol,
         disposables: Array<THREE.BufferGeometry | THREE.Material>,
@@ -178,7 +178,7 @@ export class Token {
     setLocation(location: TokenLocation) {
         this.location = location
     }
-    
+
     private static _createMesh(
         kind: TokenSymbol,
         disposables: Array<THREE.BufferGeometry | THREE.Material>
@@ -235,7 +235,7 @@ export class Token {
 
         return mesh;
     }
-    
+
     /**
      * Attach this token to a parent (board, piece, zone, etc).
      */
@@ -245,19 +245,21 @@ export class Token {
         }
         parent.add(this.mesh)
     }
-    
+
     /**
      * Set local position relative to parent.
      */
     setLocalPosition(x: number, y: number, z: number) {
         this.mesh.position.set(x, y, z)
     }
-    
+
     /**
      * Get reference to mesh for Three.js scene operations.
      */
     getMesh(): THREE.Mesh {
         return this.mesh
     }
+
+    userData = { type: 'token' };
 }
 
