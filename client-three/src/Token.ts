@@ -5,7 +5,7 @@ import type { IPiece, IPieceToken, TokenSymbol } from './Game';
 
 // ── Token ───────────────────────────────────────────────────
 export const TOKEN_COLOR = 0xf2f1eb
-export const TOKEN_SIZE = { x: 0.75, y: 0.90, z: 0.35 }
+export const TOKEN_SIZE = { x: 0.7, y: 0.70, z: 0.35 }
 export const TOKEN_RADIUS = 0.10
 
 // Symbols
